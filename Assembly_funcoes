@@ -1,0 +1,462 @@
+
+;Esse arquivo é uma coletânea de funções em Assembly que podem ser úteis para desenvolver o trabalho final da disciplina de Introdução a Sistemas Computacionais.
+;Algumas das funções podem utilizar variáveis próprias. Atente-se para a necessidade de declara-las em seu código.
+;Esse arquivo foi organizado por Leticia Barbanera (leticiabarbanera@usp.br). Caso encontre algum erro, por favor, entre em contato comigo ou com o professor da ;disciplina. 
+;As funções aqui presentes não foram desenvolvidas por mim, e seus autores estão referenciados, da melhor maneira possível, no início de cada código.
+
+;----------------------------------------------------------------------------
+
+;FUNCAO QUE PRINTA NUMEROS (DECIMAIS E BINARIOS) COM MAIS DE UM DIGITO
+
+;desenvolvido pelo grupo de BlackJack BCDdados23
+
+ImprimeNumero:
+	
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+	push r7
+	
+	loadn r0, #1345 ;numero a imprimir -- DESCARREGUE AQUI SEU VALOR
+	loadn r1, #10 ;divisor  -- Voce pode escolher outra base ao invés da decimal - Bases maiores que 10 (em decimal) printarao outros caracteres
+	loadn r2, #0 ;r2 -- nao usado
+	loadn r3, #100 ;posicao do ultimo digito a ser printado -- DESCARREGUE AQUI O LOCAL 
+		;r4 -- valor a ser printado
+	loadn r5, #0 ;zero	
+	loadn r6, #48 ;48
+	
+	loop:
+		mod r4, r0, r1
+		div r0, r0, r1
+		
+		add r7, r4, r6
+		outchar r7, r3
+		dec r3
+		
+		cmp r0, r5
+		jne loop
+		
+	push r7
+	push r6
+	push r5
+	push r4
+	push r3
+	push r2
+	push r1
+	push r0	
+		
+	rts
+
+;----------------------------------------------------------------------------
+
+;FUNCAO QUE LE PALAVRA DE TAMANHO PREDETERMINADO (NESSE CASO, 5 LETRAS, NO R4) DO TECLADO
+
+;desenvolvido pelo grupo da Forca BCDdados23
+
+	inputPalavra:
+
+	push fr ;protege os registradores de flags e outros na pilha para preservar seus valores durante a subrotina
+	push r0 ;recebe a letra digitada 
+	push r1 ;contador de quantidade de letras (index) - palavra de 5 letras
+	push r2 ;ponteiro para palavra (endereço na memória)
+	push r3 ;ponteiro para a palavra a ser adivinhada + index de qual letra na string
+	push r4 ;comparador para o tamanho da palavra
+	push r5
+	push r6
+	push r7
+
+	loadn r1, #0			;contador de quantidade de letras em 0 (index)
+	loadn r2, #Palavra		;ponteiro para palavra (endereço na memória)
+	loadn r4, #5			;comparador para o tamanho da palavra. Altere aqui o tamanho da palavra.
+
+    inputPalavra_Loop:		;leitura de letras para preencher a palavra a ser adivinhada
+		call digLetra		;espera que uma tecla seja digitada e salva na variavel global "Letra"
+	   	load r0, Letra		;Letra --> r0
+
+		add r3, r2, r1		;ponteiro para a palavra a ser adivinhada + index de qual letra na string -> r3
+		storei r3, r0		;palavra[r3] = nova letra
+
+		inc r1						;incrementa index da string
+		cmp r1, r4					;verifica se o tamanho da palavra já preencheu 5
+		jne inputPalavra_Loop		;se sim, vai para o jogo, se não retorna para pegar mais uma letra
+				
+	;coloca \0 no final da palavra
+	loadn r0, #0			;letra "digitada" recebe \0
+	add r3, r2, r1			;ponteiro para a palavra a ser adivinhada + index de última letra na string
+	storei r3, r0			;palavra[5] = \0
+
+	pop r7
+	pop r6
+	pop r5
+	pop r4	
+	pop r3
+	pop r2
+	pop r1
+	pop r0	
+	pop fr
+	rts
+
+;----------------------------------------------------------------------------
+
+;FUNCAO QUE ESPERA QUE UMA TECLA SEJA DIGITADA E SALVA NA VARIAVEL GLOBAL "LETRA"
+
+;desenvolvido pelo grupo da Forca BCDdados23
+
+digLetra:
+
+	push fr 
+	push r0
+	push r1		
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+	push r7
+
+	loadn r1, #255		;enquanto na espera de digitar algo, retorna 255
+	loadn r2, #0		;logo que programa a FPGA o inchar vem 0
+
+    digLetra_Loop:
+		inchar r0			;le o teclado, se nada for digitado = 255
+		cmp r0, r1			;compara r0 com 255
+		jeq digLetra_Loop	;fica lendo até que digite uma tecla valida
+		cmp r0, r2			;compara r0 com 0
+		jeq digLetra_Loop	;le novamente pois Logo que programa a FPGA o inchar vem 0
+
+	store Letra, r0			;salva a tecla na variavel global "Letra"
+	
+    digLetra_Loop2:	
+		inchar r0			;le o teclado, se nada for digitado = 255
+		cmp r0, r1			;compara r0 com 255
+		jne digLetra_Loop2	;fica lendo até que digite uma tecla valida
+	
+
+	pop r7
+	pop r6
+	pop r5
+	pop r4
+	pop r3
+	pop r2		
+	pop r1
+	pop r0		
+	pop fr
+	rts
+
+;---------------------------------------------------------------------------
+
+;FUNCAO QUE IMPRIME STRINGS DIRETAMENTE, ATE QUE ENCONTRE '\0'
+
+ImprimeSTR:
+
+	push fr 
+	push r0 ;posicao da tela que o primeiro caractere da mensagem será impresso
+	push r1	;endereço onde a mensagem inicia (ponteiro para uma string de final "/0")	
+	push r2 ;cor da mensagem
+	push r3
+	push r4
+	push r5
+	push r6
+	push r7
+
+	loadn r3, #'\0'	;criterio de parada
+
+   ImprimeStr_Loop:	
+		loadi r4, r1			;carrega r4 com o conteúdo de r1 (ponteiro da string)
+		cmp r4, r3				;compara com caractere "/0" 
+		jeq ImprimeStr_Sai		;se sim, final da subrotina
+		add r4, r2, r4			;define a mensagem colorida
+		outchar r4, r0			;mostra na posicao da tela o caractere
+		inc r0					;próxima posição na tela
+		inc r1					;próximo caractere da string a ser impresso
+		jmp ImprimeStr_Loop		;imprime mais um caracter no loop
+	
+   ImprimeStr_Sai:
+
+   	pop r7
+	pop r6
+	pop r5
+	pop r4
+	pop r3
+	pop r2		
+	pop r1
+	pop r0		
+	pop fr
+	rts
+
+;---------------------------------------------------------------------------
+
+;FUNCAO QUE SOBRESCREVE AS 1200 POSICOES DA TELA POR ESPACOS EM BRANCO, APAGANDO-A
+
+ApagaTela:
+
+	push fr 
+	push r0
+	push r1		
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+	push r7
+
+	loadn r0, #1200		;carrega r0 com 1200, equivalente a todas as posições na tela
+	loadn r1, #' '		;carrega r1 com "espaço" em branco
+	
+	ApagaTela_Loop:
+		dec r0					;começa do 1199 e decrementa até a posição 0
+		outchar r1, r0			;mostra um " " na posição
+		jnz ApagaTela_Loop		;termina o loop até apagar a tela por completo
+
+	pop r7
+	pop r6
+	pop r5
+	pop r4
+	pop r3
+	pop r2		
+	pop r1
+	pop r0		
+	pop fr
+	rts	
+
+;---------------------------------------------------------------------------
+
+;FUNCAO QUE MOVIMENTA OBJETOS NA TELA
+
+;desenvolvida por Eduardo
+;https://github.com/simoesusp/Processador-ICMC/blob/master/Software_Assembly/Nave11.asm
+
+MoveObj:
+	push r0
+	push r1		
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+	push r7
+	
+	call MoveObj_RecalculaPos		;Recalcula Posicao do objeto
+
+;So Apaga e Redesenha se (posicao atual (variavel "pos") != posicao anterior (variavel posAnt))	
+	load r0, posObj
+	load r1, posAntObj
+	cmp r0, r1
+	jeq MoveObj_Skip
+	call MoveObj_Apaga
+	call MoveObj_Desenha		
+  MoveObj_Skip:
+	
+	pop r7
+	pop r6
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+	pop r1
+	pop r0
+	rts
+
+;---------------------------------------------------------------------------
+
+MoveObj_RecalculaPos:
+	push r0
+	push r1		
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+	push r7
+
+load R0, posObj
+	
+	inchar R1				;Le Teclado para controlar o objeto
+	loadn R2, #'a'
+	cmp R1, R2
+	jeq MoveObj_RecalculaPos_A ;Move objeto para Esquerda
+	
+	loadn R2, #'d'
+	cmp R1, R2
+	jeq MoveObj_RecalculaPos_D ;Move objeto para Direita
+		
+	loadn R2, #'w'
+	cmp R1, R2
+	jeq MoveObj_RecalculaPos_W ;Move objeto para Cima
+		
+	loadn R2, #'s'
+	cmp R1, R2
+	jeq MoveObj_RecalculaPos_S ;Move objeto para Baixo
+	
+	loadn R2, #' '
+	cmp R1, R2
+	jeq MoveObj_RecalculaPos_Barreira 
+	
+  MoveObj_RecalculaPos_Fim:	;Se nao for nenhuma tecla valida, vai embora
+	store posObj, R0
+	push r0
+	push r1		
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+	push r7
+
+  MoveObj_RecalculaPos_A:	;Move objeto para Esquerda
+	loadn R1, #40
+	loadn R2, #0
+	mod R1, R0, R1		;Testa condicoes de Contorno 
+	cmp R1, R2
+	jeq MoveObj_RecalculaPos_Fim
+	dec R0	; pos = pos -1
+	jmp MoveObj_RecalculaPos_Fim
+		
+  MoveObj_RecalculaPos_D:	;Move objeto para Direita	
+	loadn R1, #40
+	loadn R2, #39
+	mod R1, R0, R1		;Testa condicoes de Contorno 
+	cmp R1, R2
+	jeq MoveObj_RecalculaPos_Fim
+	inc R0	; pos = pos + 1
+	jmp MoveObj_RecalculaPos_Fim
+	
+  MoveObj_RecalculaPos_W:	;Move objeto para Cima
+	loadn R1, #40
+	cmp R0, R1		;Testa condicoes de Contorno 
+	jle MoveObj_RecalculaPos_Fim
+	sub R0, R0, R1	;pos = pos - 40
+	jmp MoveObj_RecalculaPos_Fim
+
+  MoveObj_RecalculaPos_S:	;Move objeto para Baixo
+	loadn R1, #1159
+	cmp R0, R1		;Testa condicoes de Contorno 
+	jgr MoveObj_RecalculaPos_Fim
+	loadn R1, #40
+	add R0, R0, R1	;pos = pos + 40
+	jmp MoveObj_RecalculaPos_Fim	
+	
+  MoveObj_RecalculaPos_Barreira:	
+	loadn R1, #1			;Se Atirou:
+	store FlagBar, R1		;FlagBar = 1
+	store posBar, R0		;posBar = posObj
+	jmp MoveObj_RecalculaPos_Fim
+
+	pop r7
+	pop r6
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+	pop r1
+	pop r0
+	rts
+
+;---------------------------------------------------------------------------
+
+MoveObj_Apaga:
+	push r0
+	push r1		
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+	push r7
+
+	load R0, posAntObj	;R0 = posAntObj
+	
+	; --> R2 = Tela1Linha0 + posAnt + posAnt/40  
+	;tem que somar posAnt/40 no ponteiro pois as linas da string terminam com /0 !!
+
+	loadn R1, #tela0Linha0	;Endereco onde comeca a primeira linha do cenario!!
+	add R2, R1, r0	;R2 = Tela1Linha0 + posAnt
+	loadn R4, #40
+	div R3, R0, R4	;R3 = posAnt/40
+	add R2, R2, R3	; 2 = Tela1Linha0 + posAnt + posAnt/40
+	
+	loadi R5, R2	;R5 = Char (Tela(posAnt))
+	
+	outchar R5, R0	;Apaga o Obj na tela com o Char correspondente na memoria do cenario
+
+	pop r7
+	pop r6
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+	pop r1
+	pop r0
+	rts
+
+;---------------------------------------------------------------------------
+MoveObj_Desenha:
+	push r0
+	push r1		
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+	push r7
+
+	Loadn R1, #'X'	;Objeto
+	load R0, posObj
+	outchar R1, R0
+	store posAntObj, R0	;Atualiza Posicao Anterior do Objeto = Posicao Atual
+
+	pop r7
+	pop r6
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+	pop r1
+	pop r0
+	rts
+
+;---------------------------------------------------------------------------
+
+;FUNCAO DE DELAY
+
+;incrementa valor do registrador r6 ate que seja igual a 60000. Para delays mais ou menos longos, alterar esse valor. 
+;funcao desenvolvida por: 
+;Danilo Henrique Cordeiro - 6791651  - dancorde@gmail.com
+;Gabriel Kanegae Souza    - 10262648 - gabriel.kanegae@usp.br
+
+
+Delay:
+	push r0
+	push r1		
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+	push r7
+
+	inc r6
+	loadn r0, #60000
+	cmp r6, r0
+	jgr Reset_Timer
+	
+	jmp Timer_End
+	
+	Reset_Timer:
+		loadn r6, #0
+	Timer_End:		
+		pop r7
+		pop r6
+		pop r5
+		pop r4
+		pop r3
+		pop r2
+		pop r1
+		pop r0
+
+	rts
+	
